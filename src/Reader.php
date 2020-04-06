@@ -4,7 +4,7 @@
 namespace qcjackman;
 
 
-class ExcelReader
+class Reader
 {
 
 }
