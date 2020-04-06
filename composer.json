@@ -3,11 +3,11 @@
     "description": "a reader for excel file",
     "type": "library",
     "require": {
-        "php": ">=5.4",
+        "php": ">=7.1",
         "phpoffice/phpspreadsheet": "^1.11"
     },
     "require-dev": {
-        "php": ">=5.4"
+        "php": ">=7.1"
     },
     "license": "MIT",
     "authors": [
