@@ -19,7 +19,7 @@
     "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
-            "Qcjackman\\Excelreader": "src/"
+            "Qcjackman\\Excelreader\\": "src/"
         }
     }
 }
