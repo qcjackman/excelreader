@@ -9,7 +9,7 @@ Qcjackman\Excelreader\Provider\ExcelReaderServiceProvider::class,
 
 ## 发布配置
 ```
-php artisan vendor:publish --provider=Qcjackman\Excelreader\Provider\ExcelReaderServiceProvider
+php artisan vendor:publish --provider="Qcjackman\Excelreader\Provider\ExcelReaderServiceProvider"
 ```
 
 ## 使用
