@@ -78,7 +78,7 @@ class Reader
         }
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="'.$this->templateConfig['name'].'.xlsx"');
+        header('Content-Disposition: attachment;filename="'.$this->templateConfig['filename'].'.xlsx"');
         header('Cache-Control: max-age=0');
 
         $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
