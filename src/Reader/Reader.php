@@ -174,7 +174,7 @@ class Reader
             $index = $this->readExcelHandler->getFirstSheetIndex();
         }
 
-        $this->workSheetHandler = $this->readExcel->getSheet($index);
+        $this->workSheetHandler = $this->readExcelHandler->getSheet($index);
 
         $maxRow = $this->workSheetHandler->getHighestRow(); // 总行数
         $maxColumn = $this->workSheetHandler->getHighestColumn(); // 总列数
