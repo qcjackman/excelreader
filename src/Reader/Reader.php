@@ -16,24 +16,6 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 class Reader
 {
     /**
-     * 表头行号
-     * @var int
-     */
-    private $headRow = 1;
-
-    /**
-     * 模板配置项，在配置文件中配置
-     * @var string
-     */
-    private $templateOption;
-
-    /**
-     * 模板配置
-     * @var mixed
-     */
-    private $templateConfig;
-
-    /**
      * 允许的文件类型
      * @var array|mixed
      */
@@ -45,19 +27,96 @@ class Reader
      */
     private $file;
 
-    private $readExcel;
+    /**
+     * 模板配置
+     * @var mixed
+     */
+    private $option;
 
-    private $workSheet;
+    /**
+     * 字段配置
+     * @var array
+     */
+    private $fields = [];
 
-    public function __construct($option = 'example', $headRow = 1)
+    /**
+     * 要读取的sheet
+     * @var string
+     */
+    private $worksheet = 'first';
+
+    /**
+     * 表头行号
+     * @var int
+     */
+    private $headRow = 1;
+
+    /**
+     * 读取起始行
+     * @var int
+     */
+    private $startRow = 2;
+
+    /**
+     * 是否返回行数据
+     * @var bool
+     */
+    private $rowsData = true;
+
+    /**
+     * 是否返回列数据
+     * @var bool
+     */
+    private $colsData = true;
+
+    private $readExcelHandler;
+
+    private $workSheetHandler;
+
+    /**
+     * Reader constructor.
+     * @param null $option
+     * @throws \Exception
+     */
+    public function __construct($option = null)
     {
-        $this->templateOption = $option;
+        if (!$option) {
+            $this->option = Config::get('excelreader.templates.default');
+        } else {
+            $optionArray = json_decode($option, true);
 
-        $this->allowExt = Config::get('excelreader.allowed_ext');
+            if (!is_numeric($option) && json_last_error() == JSON_ERROR_NONE) {
+                $this->option = $optionArray;
+            } else {
+                $this->option = Config::get('excelreader.templates.default');
+            }
+        }
 
-        $this->templateConfig = Config::get('excelreader.templates.'.$this->templateOption);
+        if (array_key_exists('fields', $this->option)) {
+            $this->fields = $this->option['fields'];
+        } else {
+            throw new \Exception('unknown fields option');
+        }
 
-        $this->headRow = $headRow > 0 ? (int)$headRow : 1;
+        if (array_key_exists('worksheet', $this->option)) {
+            $this->worksheet = $this->option['worksheet'];
+        }
+
+        if (array_key_exists('headRow', $this->option)) {
+            $this->headRow = $this->option['headRow'];
+        }
+
+        if (array_key_exists('startRow', $this->option)) {
+            $this->startRow = $this->option['startRow'];
+        }
+
+        if (array_key_exists('rowsData', $this->option)) {
+            $this->rowsData = $this->option['rowsData'];
+        }
+
+        if (array_key_exists('colsData', $this->option)) {
+            $this->colsData = $this->option['colsData'];
+        }
     }
 
     /**
@@ -73,12 +132,12 @@ class Reader
         $worksheet->setTitle('Sheet1');
 
         //设置表头单元格内容
-        foreach ($this->templateConfig['fields'] as $key => $field) {
+        foreach ($this->fields as $key => $field) {
             $worksheet->setCellValueByColumnAndRow($key+1, $this->headRow, $field['text']);
         }
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="'.$this->templateConfig['filename'].'.xlsx"');
+        header('Content-Disposition: attachment;filename="'.md5(microtime(true)).'.xlsx"');
         header('Cache-Control: max-age=0');
 
         $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
@@ -101,7 +160,7 @@ class Reader
 
         $reader = IOFactory::createReader($type);
 
-        $this->readExcel = $reader->load($this->file->getRealPath());
+        $this->readExcelHandler = $reader->load($this->file->getRealPath());
 
         return $this;
     }
@@ -113,26 +172,26 @@ class Reader
      * @return array
      * @throws Exception
      */
-    public function toArray($sheetIndex = 'first', int $startRow = 2)
+    public function toArray()
     {
-        if ($sheetIndex == 'active') {
-            $index = $this->readExcel->getActiveSheetIndex();
+        if ($this->worksheet == 'active') {
+            $index = $this->readExcelHandler->getActiveSheetIndex();
         } else{
-            $index = $this->readExcel->getFirstSheetIndex();
+            $index = $this->readExcelHandler->getFirstSheetIndex();
         }
 
-        $this->workSheet = $this->readExcel->getSheet($index);
+        $this->workSheetHandler = $this->readExcel->getSheet($index);
 
-        $maxRow = $this->workSheet->getHighestRow(); // 总行数
-        $maxColumn = $this->workSheet->getHighestColumn(); // 总列数
+        $maxRow = $this->workSheetHandler->getHighestRow(); // 总行数
+        $maxColumn = $this->workSheetHandler->getHighestColumn(); // 总列数
         $maxColumnIndex = Coordinate::columnIndexFromString($maxColumn);
 
-        $colFields = $this->getHeaderFields($this->templateConfig['fields']);
+        $colFields = $this->getHeaderFields($this->fields);
 
         // 表头下一行为数据行
-        $startRow = $startRow > $this->headRow ? (int)$startRow : $this->headRow + 1;
-        $sheetData = $this->getSheetData($colFields, $maxRow, $maxColumnIndex, $startRow);
-        $title = (string)$this->workSheet->getTitle();
+        $startRow = $this->startRow > $this->headRow ? (int)$this->startRow : $this->headRow + 1;
+        $sheetData = $this->getSheetData($colFields, $maxRow, $maxColumnIndex, $this->startRow);
+        $title = (string)$this->workSheetHandler->getTitle();
 
         return [
             'title'    => $title,
@@ -153,7 +212,7 @@ class Reader
     public function getHeaderFields(array $fields)
     {
         // 最后一列的编号
-        $maxColumn = $this->workSheet->getHighestColumn();
+        $maxColumn = $this->workSheetHandler->getHighestColumn();
 
         // 最后一列的序号
         $maxColumnIndex = Coordinate::columnIndexFromString($maxColumn);
@@ -167,7 +226,7 @@ class Reader
         for ($col = 1; $col <= $maxColumnIndex; $col++) {
             $colStr = strtoupper(Coordinate::stringFromColumnIndex($col));
 
-            $cell = $this->workSheet->getCellByColumnAndRow($col, $row);
+            $cell = $this->workSheetHandler->getCellByColumnAndRow($col, $row);
 
             $value = $this->getStringCell($cell);
 
@@ -198,7 +257,7 @@ class Reader
         $uniqueRows = [];// 重复
 
         // 画板,照片等
-        $drawings = $this->workSheet->getDrawingCollection();
+        $drawings = $this->workSheetHandler->getDrawingCollection();
         $images = [];
         foreach ($drawings as $drawing) {
             $coord = $drawing->getCoordinates();
@@ -220,7 +279,7 @@ class Reader
                 if (isset($uniqueRows[$row]) && $uniqueRows[$row]) {
                     continue;
                 }
-                $cell = $this->workSheet->getCellByColumnAndRow($col, $row);
+                $cell = $this->workSheetHandler->getCellByColumnAndRow($col, $row);
 
                 $type = isset($field['type']) ? $field['type'] : 'string';
                 $unique = isset($field['unique']) ? (bool)$field['unique'] : FALSE;
