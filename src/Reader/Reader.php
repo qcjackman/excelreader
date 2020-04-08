@@ -75,21 +75,13 @@ class Reader
 
     /**
      * Reader constructor.
-     * @param null $option
+     * @param array $option
      * @throws \Exception
      */
-    public function __construct($option = null)
+    public function __construct($option = [])
     {
         if (!$option) {
             $this->option = Config::get('excelreader.templates.default');
-        } else {
-            $optionArray = json_decode($option, true);
-
-            if (!is_numeric($option) && json_last_error() == JSON_ERROR_NONE) {
-                $this->option = $optionArray;
-            } else {
-                $this->option = Config::get('excelreader.templates.default');
-            }
         }
 
         if (array_key_exists('fields', $this->option)) {
