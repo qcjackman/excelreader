@@ -82,6 +82,8 @@ class Reader
     {
         if (!$option) {
             $this->option = Config::get('excelreader.templates.default');
+        } else {
+            $this->option = $option;
         }
 
         if (array_key_exists('fields', $this->option)) {
@@ -185,14 +187,22 @@ class Reader
         $sheetData = $this->getSheetData($colFields, $maxRow, $maxColumnIndex, $this->startRow);
         $title = (string)$this->workSheetHandler->getTitle();
 
-        return [
+        $result = [
             'title'    => $title,
             'maxRow'   => count($sheetData['rowsData']),
             'maxCol'   => count($sheetData['colsData']),
             'startRow' => $startRow,
-            'rowsData' => $sheetData['rowsData'],
-            'colsData' => $sheetData['colsData'],
         ];
+
+        if ($this->rowsData) {
+            $result['rowsData'] = $sheetData['rowsData'];
+        }
+
+        if ($this->colsData) {
+            $result['colsData'] = $sheetData['colsData'];
+        }
+
+        return $result;
     }
 
     /**
