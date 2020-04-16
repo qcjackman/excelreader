@@ -115,9 +115,15 @@ class Reader
 
     /**
      * 生成模板
+     * @param string $fileName
+     * @return bool
      */
-    public function templateFile()
+    public function templateFile($fileName = '')
     {
+        if ($fileName == '') {
+            $fileName = md5(microtime(true));
+        }
+
         $spreadsheet = new Spreadsheet();
 
         $worksheet = $spreadsheet->getActiveSheet();
@@ -130,14 +136,15 @@ class Reader
             $worksheet->setCellValueByColumnAndRow($key+1, $this->headRow, $field['text']);
         }
 
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="'.md5(microtime(true)).'.xlsx"');
+        header('Content-Disposition: attachment;filename="'.$fileName.'.xlsx"');
         header('Cache-Control: max-age=0');
 
-        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
         $writer->save('php://output');
 
-        return true;
+        exit();
     }
 
     public function setFile(UploadedFile $file)
